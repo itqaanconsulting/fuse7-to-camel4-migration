@@ -8,6 +8,10 @@ Fuse 7 is out of support since June 2026. This repository shows a migration appr
 
 https://github.com/user-attachments/assets/9b02ef34-a00c-4d72-aab1-48f49f84929b
 
+**English version:**
+
+https://github.com/user-attachments/assets/3e7d1d91-106d-4931-9113-75e89828f2e8
+
 
 ## The integration
 

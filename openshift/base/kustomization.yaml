@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: shipment-status
+      app.kubernetes.io/part-of: logistics-integration
+    includeSelectors: true
+
+resources:
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - servicemonitor.yaml
+
+images:
+  - name: shipment-status
+    newName: ghcr.io/itqaanconsulting/shipment-status
+    newTag: latest

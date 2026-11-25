@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipment-status
+spec:
+  # One replica: the idempotent repository is in memory, like on Fuse. Scaling out needs a
+  # shared repository (JDBC or Infinispan), see docs/MIGRATION.md.
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: integration
+    spec:
+      containers:
+        - name: shipment-status
+          image: shipment-status
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: shipment-status-config
+          env:
+            # Credentials come from a Secret that is not part of this repository:
+            #   oc create secret generic shipment-status-amq --from-literal=JMS_USERNAME=... --from-literal=JMS_PASSWORD=...
+            - name: JMS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shipment-status-amq
+                  key: JMS_USERNAME
+            - name: JMS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shipment-status-amq
+                  key: JMS_PASSWORD
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault

@@ -37,6 +37,18 @@ jobs:
           cache: maven
       - name: Run the same golden-file scenarios against the Camel 4 application
         run: mvn --batch-mode --no-transfer-progress -pl scenario-harness,modern-quarkus -am verify
+      - name: Build the container image
+        run: docker build -f modern-quarkus/src/main/docker/Dockerfile.jvm -t shipment-status:ci modern-quarkus
+
+  manifests:
+    name: OpenShift manifests render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render base and dev overlay with Kustomize
+        run: |
+          kubectl kustomize openshift/base > /dev/null
+          kubectl kustomize openshift/overlays/dev
 
   equivalence:
     name: Mapping carried over unchanged

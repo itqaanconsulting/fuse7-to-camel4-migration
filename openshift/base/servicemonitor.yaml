@@ -1,0 +1,13 @@
+# Scraped by OpenShift user workload monitoring (replaces Hawtio/JMX on Karaf).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shipment-status
+spec:
+  endpoints:
+    - port: http
+      path: /q/metrics
+      interval: 30s
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shipment-status

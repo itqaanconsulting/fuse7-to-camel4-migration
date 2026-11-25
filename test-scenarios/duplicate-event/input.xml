@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ShipmentStatus xmlns="urn:logistics:carrier:status:v1" eventId="EVT-2001">
+<ShipmentStatus xmlns="urn:logistics:carrier:status:v1" eventId="EVT-2002">
   <Carrier>EUROFREIGHT</Carrier>
   <TrackingNumber>EF00098765</TrackingNumber>
   <StatusCode>TRN</StatusCode>

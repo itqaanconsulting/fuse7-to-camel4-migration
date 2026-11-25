@@ -4,6 +4,8 @@ A logistics integration as it runs on **Red Hat Fuse 7** (Camel 2.23, Blueprint,
 
 Fuse 7 is out of support since June 2026. This repository shows a migration approach that is safe because it is measurable: the old and the new implementation run the same scenarios, and the build fails if they differ.
 
+![Both implementations pass the same scenarios, and the regression they caught](docs/images/demo.gif)
+
 ## The integration
 
 Carriers publish shipment status events. The integration validates them, looks up the shipment in a SOAP registry, maps them to the canonical event and delivers them to the Track and Trace API.

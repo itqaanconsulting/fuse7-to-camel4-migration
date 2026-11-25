@@ -4,8 +4,7 @@ A logistics integration as it runs on **Red Hat Fuse 7** (Camel 2.23, Blueprint,
 
 Fuse 7 is out of support since June 2026. This repository shows a migration approach that is safe because it is measurable: the old and the new implementation run the same scenarios, and the build fails if they differ.
 
-![Both implementations pass the same scenarios, and the regression they caught](docs/images/demo.gif)
-
+**Demo (2 minutes, with voice-over in Dutch):**
 
 https://github.com/user-attachments/assets/9b02ef34-a00c-4d72-aab1-48f49f84929b
 

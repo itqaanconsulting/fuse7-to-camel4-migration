@@ -1,0 +1,16 @@
+# Was: etc/nl.itqaanconsulting.logistics.shipmentstatus.cfg on Karaf.
+# Keys are MicroProfile Config names in environment-variable form (jms.broker-url -> JMS_BROKER_URL).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipment-status-config
+data:
+  JMS_BROKER_URL: tcp://amq-broker-hdls-svc:61616
+  QUEUE_IN: carrier.status.in
+  QUEUE_INVALID: carrier.status.invalid
+  QUEUE_DLQ: carrier.status.dlq
+  REGISTRY_URL: http://shipment-registry:8080/registry
+  TRACKTRACE_AUTHORITY: track-trace:8080
+  DELIVERY_MAXIMUM_REDELIVERIES: "2"
+  DELIVERY_REDELIVERY_DELAY: "1000"
+  DELIVERY_BACK_OFF_MULTIPLIER: "2"

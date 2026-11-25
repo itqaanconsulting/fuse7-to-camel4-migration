@@ -1,0 +1,27 @@
+# Local cluster (OpenShift Local / minikube): smaller footprint, faster retries, debug logging.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logistics-dev
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: shipment-status-config
+    patch: |-
+      - op: add
+        path: /data/DELIVERY_REDELIVERY_DELAY
+        value: "200"
+      - op: add
+        path: /data/QUARKUS_LOG_CATEGORY__ORG_APACHE_CAMEL__LEVEL
+        value: DEBUG
+  - target:
+      kind: Deployment
+      name: shipment-status
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 192Mi

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Shipment status integration on Camel 4 (XML IO DSL), migrated from the Fuse 7 Blueprint XML.
+  Same flow; only what Camel 3/4 forced changed:
+
+    http4://                        -> http://
+    xslt:...?saxon=true, xslt:...   -> xslt-saxon:... (one XSLT engine, Saxon, for both stylesheets)
+    setHeader headerName            -> setHeader name
+    http.common.HttpOperationFailed -> http.base.HttpOperationFailedException
+    enrich strategyRef              -> enrich aggregationStrategy
+    idempotentConsumer
+      messageIdRepositoryRef        -> idempotentRepository
+    <camelContext> + beans          -> <routes>; beans are CDI producers (IntegrationBeans)
+    ${...} Config Admin             -> {{...}} MicroProfile Config (application.properties)
+-->
+<routes xmlns="http://camel.apache.org/schema/xml-io"
+        xmlns:cs="urn:logistics:carrier:status:v1">
+
+    <route id="carrier-status-in">
+        <from uri="jms:queue:{{queue.in}}"/>
+
+        <onException>
+            <exception>org.apache.camel.ValidationException</exception>
+            <handled><constant>true</constant></handled>
+            <setHeader name="FailureReason"><simple>${exception.message}</simple></setHeader>
+            <log loggingLevel="WARN" message="Invalid carrier message: ${exception.message}"/>
+            <to uri="jms:queue:{{queue.invalid}}"/>
+        </onException>
+
+        <onException useOriginalMessage="true">
+            <exception>org.apache.cxf.binding.soap.SoapFault</exception>
+            <handled><constant>true</constant></handled>
+            <setHeader name="FailureReason"><simple>Registry: ${exception.message}</simple></setHeader>
+            <log loggingLevel="ERROR" message="Registry lookup failed for ${header.CarrierEventId}: ${exception.message}"/>
+            <to uri="jms:queue:{{queue.dlq}}"/>
+        </onException>
+
+        <!-- Track and Trace server errors are transient: retry with exponential back-off. -->
+        <onException useOriginalMessage="true">
+            <exception>org.apache.camel.http.base.HttpOperationFailedException</exception>
+            <onWhen><simple>${exception.statusCode} &gt;= 500</simple></onWhen>
+            <redeliveryPolicy maximumRedeliveries="{{delivery.maximum-redeliveries}}"
+                              redeliveryDelay="{{delivery.redelivery-delay}}"
+                              backOffMultiplier="{{delivery.back-off-multiplier}}"
+                              useExponentialBackOff="true"
+                              retryAttemptedLogLevel="WARN"/>
+            <handled><constant>true</constant></handled>
+            <setHeader name="FailureReason"><simple>Track and Trace: HTTP ${exception.statusCode}</simple></setHeader>
+            <to uri="jms:queue:{{queue.dlq}}"/>
+        </onException>
+
+        <!-- Client errors (4xx) will not succeed on retry. -->
+        <onException useOriginalMessage="true">
+            <exception>org.apache.camel.http.base.HttpOperationFailedException</exception>
+            <handled><constant>true</constant></handled>
+            <setHeader name="FailureReason"><simple>Track and Trace: HTTP ${exception.statusCode}</simple></setHeader>
+            <to uri="jms:queue:{{queue.dlq}}"/>
+        </onException>
+
+        <onException useOriginalMessage="true">
+            <exception>java.io.IOException</exception>
+            <redeliveryPolicy maximumRedeliveries="{{delivery.maximum-redeliveries}}"
+                              redeliveryDelay="{{delivery.redelivery-delay}}"
+                              backOffMultiplier="{{delivery.back-off-multiplier}}"
+                              useExponentialBackOff="true"
+                              retryAttemptedLogLevel="WARN"/>
+            <handled><constant>true</constant></handled>
+            <setHeader name="FailureReason"><simple>${exception.message}</simple></setHeader>
+            <to uri="jms:queue:{{queue.dlq}}"/>
+        </onException>
+
+        <to uri="validator:xsd/shipment-status.xsd"/>
+        <setHeader name="CarrierEventId">
+            <xpath resultType="java.lang.String">/cs:ShipmentStatus/@eventId</xpath>
+        </setHeader>
+
+        <idempotentConsumer idempotentRepository="processedEvents">
+            <header>CarrierEventId</header>
+
+            <enrich aggregationStrategy="registryEnrichment">
+                <constant>direct:registry-lookup</constant>
+            </enrich>
+            <to uri="xslt-saxon:xslt/to-shipment-event.xsl"/>
+
+            <!-- Do not leak JMS headers into the HTTP request. -->
+            <removeHeaders pattern="*" excludePattern="CarrierEventId"/>
+            <setHeader name="CamelHttpMethod"><constant>POST</constant></setHeader>
+            <setHeader name="Content-Type"><constant>application/json</constant></setHeader>
+            <to uri="http://{{tracktrace.authority}}/api/shipment-events"/>
+            <log message="Shipment event ${header.CarrierEventId} delivered to Track and Trace"/>
+        </idempotentConsumer>
+    </route>
+
+    <route id="registry-lookup" errorHandlerRef="noErrorHandler">
+        <from uri="direct:registry-lookup"/>
+        <to uri="xslt-saxon:xslt/registry-request.xsl"/>
+        <setHeader name="operationName"><constant>GetShipment</constant></setHeader>
+        <setHeader name="operationNamespace"><constant>urn:logistics:registry:v1</constant></setHeader>
+        <to uri="cxf:bean:shipmentRegistry"/>
+        <convertBodyTo type="java.lang.String"/>
+    </route>
+</routes>

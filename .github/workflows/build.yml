@@ -24,3 +24,24 @@ jobs:
           cache: maven
       - name: Run golden-file scenarios against the Blueprint route
         run: mvn --batch-mode --no-transfer-progress -pl scenario-harness,legacy-fuse7 -am verify
+
+  modern:
+    name: Camel 4 on Quarkus scenarios (JDK 21)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run the same golden-file scenarios against the Camel 4 application
+        run: mvn --batch-mode --no-transfer-progress -pl scenario-harness,modern-quarkus -am verify
+
+  equivalence:
+    name: Mapping carried over unchanged
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The XSLT mappings must be identical in both implementations
+        run: diff -r legacy-fuse7/src/main/resources/xslt modern-quarkus/src/main/resources/xslt

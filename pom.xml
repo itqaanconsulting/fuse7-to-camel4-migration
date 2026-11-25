@@ -13,6 +13,7 @@
     <modules>
         <module>scenario-harness</module>
         <module>legacy-fuse7</module>
+        <module>modern-quarkus</module>
     </modules>
 
     <properties>

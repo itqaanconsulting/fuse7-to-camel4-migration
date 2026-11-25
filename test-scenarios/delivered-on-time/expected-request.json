@@ -1,0 +1,12 @@
+{
+  "eventId": "EVT-1001",
+  "shipmentId": "SHP-2026-0042",
+  "customerReference": "PO-88123",
+  "carrier": "NORTHLINE",
+  "trackingNumber": "NL123456789",
+  "status": "DELIVERED",
+  "occurredAt": "2026-11-20T14:32:00+01:00",
+  "location": { "city": "Utrecht", "country": "NL" },
+  "signedBy": "J. de Vries",
+  "onTime": true
+}

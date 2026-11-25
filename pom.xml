@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>nl.itqaanconsulting.logistics</groupId>
+    <artifactId>fuse7-to-camel4-migration</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Fuse 7 to Camel 4 migration</name>
+
+    <modules>
+        <module>scenario-harness</module>
+        <module>legacy-fuse7</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <scenarios.dir>${maven.multiModuleProjectDirectory}/test-scenarios</scenarios.dir>
+        <contracts.dir>${maven.multiModuleProjectDirectory}/contracts</contracts.dir>
+        <wiremock.version>2.35.2</wiremock.version>
+        <jackson.version>2.17.2</jackson.version>
+    </properties>
+</project>

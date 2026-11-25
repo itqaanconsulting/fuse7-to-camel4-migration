@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SOAP service of the (legacy) shipment registry. Unchanged by the migration. -->
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                  xmlns:reg="urn:logistics:registry:v1"
+                  name="ShipmentRegistry"
+                  targetNamespace="urn:logistics:registry:v1">
+  <wsdl:types>
+    <xs:schema targetNamespace="urn:logistics:registry:v1" elementFormDefault="qualified">
+      <xs:element name="GetShipmentRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="trackingNumber" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="GetShipmentResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="shipmentId" type="xs:string"/>
+            <xs:element name="customerReference" type="xs:string"/>
+            <xs:element name="promisedDeliveryDate" type="xs:date"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+  </wsdl:types>
+
+  <wsdl:message name="GetShipmentRequest">
+    <wsdl:part name="parameters" element="reg:GetShipmentRequest"/>
+  </wsdl:message>
+  <wsdl:message name="GetShipmentResponse">
+    <wsdl:part name="parameters" element="reg:GetShipmentResponse"/>
+  </wsdl:message>
+
+  <wsdl:portType name="ShipmentRegistry">
+    <wsdl:operation name="GetShipment">
+      <wsdl:input message="reg:GetShipmentRequest"/>
+      <wsdl:output message="reg:GetShipmentResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="ShipmentRegistrySoapBinding" type="reg:ShipmentRegistry">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="GetShipment">
+      <soap:operation soapAction="urn:logistics:registry:v1:GetShipment"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="ShipmentRegistryService">
+    <wsdl:port name="ShipmentRegistryPort" binding="reg:ShipmentRegistrySoapBinding">
+      <soap:address location="http://localhost:8089/registry"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

@@ -1,0 +1,10 @@
+{
+  "eventId": "EVT-2001",
+  "shipmentId": "SHP-2026-0051",
+  "customerReference": "PO-77310",
+  "carrier": "EUROFREIGHT",
+  "trackingNumber": "EF00098765",
+  "status": "IN_TRANSIT",
+  "occurredAt": "2026-11-19T22:10:00+01:00",
+  "location": { "city": "Venlo", "country": "NL" }
+}

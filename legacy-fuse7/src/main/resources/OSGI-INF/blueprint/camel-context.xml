@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Shipment status integration, as deployed on Red Hat Fuse 7 (Karaf).
+
+  carrier.status.in (AMQ)
+    -> XSD validation          (invalid  -> carrier.status.invalid)
+    -> idempotent on eventId   (duplicates are dropped)
+    -> registry lookup (SOAP)  (fault    -> carrier.status.dlq)
+    -> XSLT to JSON
+    -> Track and Trace REST    (5xx/IO: retry, then dlq; 4xx: dlq)
+-->
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns:cxf="http://camel.apache.org/schema/blueprint/cxf"
+           xsi:schemaLocation="
+             http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+             http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd
+             http://camel.apache.org/schema/blueprint/cxf http://camel.apache.org/schema/blueprint/cxf/camel-cxf.xsd">
+
+    <!-- Configuration via Config Admin: etc/nl.itqaanconsulting.logistics.shipmentstatus.cfg -->
+    <cm:property-placeholder persistent-id="nl.itqaanconsulting.logistics.shipmentstatus">
+        <cm:default-properties>
+            <cm:property name="jms.brokerUrl" value="tcp://amq-broker:61616"/>
+            <cm:property name="jms.username" value="admin"/>
+            <cm:property name="jms.password" value="admin"/>
+            <cm:property name="queue.in" value="carrier.status.in"/>
+            <cm:property name="queue.invalid" value="carrier.status.invalid"/>
+            <cm:property name="queue.dlq" value="carrier.status.dlq"/>
+            <cm:property name="registry.url" value="http://shipment-registry:8080/registry"/>
+            <cm:property name="tracktrace.authority" value="track-trace:8080"/>
+            <cm:property name="delivery.maximumRedeliveries" value="2"/>
+            <cm:property name="delivery.redeliveryDelay" value="1000"/>
+            <cm:property name="delivery.backOffMultiplier" value="2"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <bean id="artemisConnectionFactory" class="org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory">
+        <argument value="${jms.brokerUrl}"/>
+        <argument value="${jms.username}"/>
+        <argument value="${jms.password}"/>
+    </bean>
+
+    <bean id="jms" class="org.apache.camel.component.jms.JmsComponent">
+        <property name="connectionFactory" ref="artemisConnectionFactory"/>
+    </bean>
+
+    <cxf:cxfEndpoint id="shipmentRegistry"
+                     address="${registry.url}"
+                     wsdlURL="wsdl/shipment-registry.wsdl"
+                     serviceName="reg:ShipmentRegistryService"
+                     endpointName="reg:ShipmentRegistryPort"
+                     xmlns:reg="urn:logistics:registry:v1">
+        <cxf:properties>
+            <entry key="dataFormat" value="PAYLOAD"/>
+        </cxf:properties>
+    </cxf:cxfEndpoint>
+
+    <bean id="registryEnrichment" class="nl.itqaanconsulting.logistics.legacy.RegistryEnrichmentStrategy"/>
+
+    <bean id="processedEvents" class="org.apache.camel.processor.idempotent.MemoryIdempotentRepository"
+          factory-method="memoryIdempotentRepository">
+        <argument value="10000"/>
+    </bean>
+
+    <!-- Lets exceptions of the lookup sub-route reach the error handling of the main route. -->
+    <bean id="noErrorHandler" class="org.apache.camel.builder.NoErrorHandlerBuilder"/>
+
+    <camelContext id="shipment-status" xmlns="http://camel.apache.org/schema/blueprint"
+                  xmlns:cs="urn:logistics:carrier:status:v1">
+
+        <route id="carrier-status-in">
+            <from uri="jms:queue:{{queue.in}}"/>
+
+            <onException>
+                <exception>org.apache.camel.ValidationException</exception>
+                <handled><constant>true</constant></handled>
+                <setHeader headerName="FailureReason"><simple>${exception.message}</simple></setHeader>
+                <log loggingLevel="WARN" message="Invalid carrier message: ${exception.message}"/>
+                <to uri="jms:queue:{{queue.invalid}}"/>
+            </onException>
+
+            <onException useOriginalMessage="true">
+                <exception>org.apache.cxf.binding.soap.SoapFault</exception>
+                <handled><constant>true</constant></handled>
+                <setHeader headerName="FailureReason"><simple>Registry: ${exception.message}</simple></setHeader>
+                <log loggingLevel="ERROR" message="Registry lookup failed for ${header.CarrierEventId}: ${exception.message}"/>
+                <to uri="jms:queue:{{queue.dlq}}"/>
+            </onException>
+
+            <!-- Track and Trace server errors are transient: retry with exponential back-off. -->
+            <onException useOriginalMessage="true">
+                <exception>org.apache.camel.http.common.HttpOperationFailedException</exception>
+                <onWhen><simple>${exception.statusCode} &gt;= 500</simple></onWhen>
+                <redeliveryPolicy maximumRedeliveries="{{delivery.maximumRedeliveries}}"
+                                  redeliveryDelay="{{delivery.redeliveryDelay}}"
+                                  backOffMultiplier="{{delivery.backOffMultiplier}}"
+                                  useExponentialBackOff="true"
+                                  retryAttemptedLogLevel="WARN"/>
+                <handled><constant>true</constant></handled>
+                <setHeader headerName="FailureReason"><simple>Track and Trace: HTTP ${exception.statusCode}</simple></setHeader>
+                <to uri="jms:queue:{{queue.dlq}}"/>
+            </onException>
+
+            <!-- Client errors (4xx) will not succeed on retry. -->
+            <onException useOriginalMessage="true">
+                <exception>org.apache.camel.http.common.HttpOperationFailedException</exception>
+                <handled><constant>true</constant></handled>
+                <setHeader headerName="FailureReason"><simple>Track and Trace: HTTP ${exception.statusCode}</simple></setHeader>
+                <to uri="jms:queue:{{queue.dlq}}"/>
+            </onException>
+
+            <onException useOriginalMessage="true">
+                <exception>java.io.IOException</exception>
+                <redeliveryPolicy maximumRedeliveries="{{delivery.maximumRedeliveries}}"
+                                  redeliveryDelay="{{delivery.redeliveryDelay}}"
+                                  backOffMultiplier="{{delivery.backOffMultiplier}}"
+                                  useExponentialBackOff="true"
+                                  retryAttemptedLogLevel="WARN"/>
+                <handled><constant>true</constant></handled>
+                <setHeader headerName="FailureReason"><simple>${exception.message}</simple></setHeader>
+                <to uri="jms:queue:{{queue.dlq}}"/>
+            </onException>
+
+            <to uri="validator:xsd/shipment-status.xsd"/>
+            <setHeader headerName="CarrierEventId">
+                <xpath resultType="java.lang.String">/cs:ShipmentStatus/@eventId</xpath>
+            </setHeader>
+
+            <idempotentConsumer messageIdRepositoryRef="processedEvents">
+                <header>CarrierEventId</header>
+
+                <enrich strategyRef="registryEnrichment">
+                    <constant>direct:registry-lookup</constant>
+                </enrich>
+                <to uri="xslt:xslt/to-shipment-event.xsl?saxon=true"/>
+
+                <!-- Do not leak JMS headers into the HTTP request. -->
+                <removeHeaders pattern="*" excludePattern="CarrierEventId"/>
+                <setHeader headerName="CamelHttpMethod"><constant>POST</constant></setHeader>
+                <setHeader headerName="Content-Type"><constant>application/json</constant></setHeader>
+                <to uri="http4://{{tracktrace.authority}}/api/shipment-events"/>
+                <log message="Shipment event ${header.CarrierEventId} delivered to Track and Trace"/>
+            </idempotentConsumer>
+        </route>
+
+        <route id="registry-lookup" errorHandlerRef="noErrorHandler">
+            <from uri="direct:registry-lookup"/>
+            <to uri="xslt:xslt/registry-request.xsl"/>
+            <setHeader headerName="operationName"><constant>GetShipment</constant></setHeader>
+            <setHeader headerName="operationNamespace"><constant>urn:logistics:registry:v1</constant></setHeader>
+            <to uri="cxf:bean:shipmentRegistry"/>
+            <convertBodyTo type="java.lang.String"/>
+        </route>
+    </camelContext>
+</blueprint>

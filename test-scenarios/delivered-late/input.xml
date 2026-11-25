@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ShipmentStatus xmlns="urn:logistics:carrier:status:v1" eventId="EVT-1002">
+  <Carrier>NORTHLINE</Carrier>
+  <TrackingNumber>NL555000111</TrackingNumber>
+  <StatusCode>DLV</StatusCode>
+  <EventTime>2026-11-24T09:05:00+01:00</EventTime>
+  <Location>
+    <City>Rotterdam</City>
+    <Country>NL</Country>
+  </Location>
+</ShipmentStatus>

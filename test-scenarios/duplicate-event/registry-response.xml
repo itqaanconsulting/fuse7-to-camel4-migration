@@ -1,0 +1,5 @@
+<reg:GetShipmentResponse xmlns:reg="urn:logistics:registry:v1">
+  <reg:shipmentId>SHP-2026-0051</reg:shipmentId>
+  <reg:customerReference>PO-77310</reg:customerReference>
+  <reg:promisedDeliveryDate>2026-11-21</reg:promisedDeliveryDate>
+</reg:GetShipmentResponse>

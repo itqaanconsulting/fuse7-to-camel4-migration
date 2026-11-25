@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Status event as sent by carriers. Contract owned by the carriers; unchanged by the migration. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:logistics:carrier:status:v1"
+           targetNamespace="urn:logistics:carrier:status:v1"
+           elementFormDefault="qualified">
+
+  <xs:element name="ShipmentStatus">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Carrier" type="NonEmptyString"/>
+        <xs:element name="TrackingNumber" type="NonEmptyString"/>
+        <xs:element name="StatusCode" type="StatusCode"/>
+        <xs:element name="EventTime" type="xs:dateTime"/>
+        <xs:element name="Location" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="City" type="NonEmptyString"/>
+              <xs:element name="Country">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:pattern value="[A-Z]{2}"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="SignedBy" type="NonEmptyString" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="eventId" type="NonEmptyString" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- DLV delivered, TRN in transit, OUT out for delivery, EXC exception -->
+  <xs:simpleType name="StatusCode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="DLV"/>
+      <xs:enumeration value="TRN"/>
+      <xs:enumeration value="OUT"/>
+      <xs:enumeration value="EXC"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="NonEmptyString">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

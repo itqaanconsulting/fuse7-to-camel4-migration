@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>nl.itqaanconsulting.logistics</groupId>
+        <artifactId>fuse7-to-camel4-migration</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legacy-fuse7</artifactId>
+    <packaging>bundle</packaging>
+    <name>Legacy: Fuse 7 bundle (Camel 2.23, Blueprint, Karaf)</name>
+    <description>
+        The starting point of the migration: a shipment status integration as it typically runs
+        on Red Hat Fuse 7 (Karaf, OSGi, Blueprint XML DSL, AMQ 7, CXF). Versions follow Fuse 7.13.
+    </description>
+
+    <properties>
+        <maven.compiler.release>11</maven.compiler.release>
+        <!-- Fuse 7.13 ships Camel 2.23.2.fuse; the community release closest to it: -->
+        <camel.version>2.23.4</camel.version>
+        <artemis.version>2.19.1</artemis.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Newer Aries proxy so the Blueprint test also runs on JDK 17/21 (1.1.1 only knows class files up to Java 11). -->
+            <dependency>
+                <groupId>org.apache.aries.proxy</groupId>
+                <artifactId>org.apache.aries.proxy</artifactId>
+                <version>1.1.14</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.camel</groupId>
+                <artifactId>camel-parent</artifactId>
+                <version>${camel.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Provided by the Fuse/Karaf runtime through features; compile scope keeps the tests self-contained. -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jms</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-cxf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-http4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-saxon</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>artemis-jms-client</artifactId>
+            <version>${artemis.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test-blueprint</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>artemis-server</artifactId>
+            <version>${artemis.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.itqaanconsulting.logistics</groupId>
+            <artifactId>scenario-harness</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          Java 11 no longer ships JAXB, JAX-WS and javax.annotation. On Fuse 7 the Karaf runtime
+          provides them as bundles; for the plain-JVM Blueprint test we add them explicitly.
+        -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.9</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.ws</groupId>
+            <artifactId>jaxws-api</artifactId>
+            <version>2.3.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.jws</groupId>
+            <artifactId>javax.jws-api</artifactId>
+            <version>1.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.soap</groupId>
+            <artifactId>javax.xml.soap-api</artifactId>
+            <version>1.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.messaging.saaj</groupId>
+            <artifactId>saaj-impl</artifactId>
+            <version>1.5.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>javax.activation-api</artifactId>
+            <version>1.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-commons</artifactId>
+            <version>9.7</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
+            <version>6.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The carrier XSD and registry WSDL are shared contracts, not owned by this bundle. -->
+            <resource>
+                <directory>${contracts.dir}</directory>
+                <includes><include>shipment-status.xsd</include></includes>
+                <targetPath>xsd</targetPath>
+            </resource>
+            <resource>
+                <directory>${contracts.dir}</directory>
+                <includes><include>shipment-registry.wsdl</include></includes>
+                <targetPath>wsdl</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>5.1.9</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>nl.itqaanconsulting.logistics.shipmentstatus</Bundle-SymbolicName>
+                        <Import-Package>*</Import-Package>
+                        <Export-Package/>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <scenarios.dir>${scenarios.dir}</scenarios.dir>
+                        <!-- JAXB 2.3 bytecode optimisation relies on sun.misc.Unsafe.defineClass (gone after Java 11). -->
+                        <com.sun.xml.bind.v2.bytecode.ClassTailor.noOptimize>true</com.sun.xml.bind.v2.bytecode.ClassTailor.noOptimize>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

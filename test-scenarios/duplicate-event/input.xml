@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ShipmentStatus xmlns="urn:logistics:carrier:status:v1" eventId="EVT-2001">
+  <Carrier>EUROFREIGHT</Carrier>
+  <TrackingNumber>EF00098765</TrackingNumber>
+  <StatusCode>TRN</StatusCode>
+  <EventTime>2026-11-19T22:10:00+01:00</EventTime>
+  <Location>
+    <City>Venlo</City>
+    <Country>NL</Country>
+  </Location>
+</ShipmentStatus>

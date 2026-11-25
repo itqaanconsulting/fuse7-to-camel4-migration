@@ -1,0 +1,11 @@
+{
+  "eventId": "EVT-1002",
+  "shipmentId": "SHP-2026-0077",
+  "customerReference": "PO-90001",
+  "carrier": "NORTHLINE",
+  "trackingNumber": "NL555000111",
+  "status": "DELIVERED",
+  "occurredAt": "2026-11-24T09:05:00+01:00",
+  "location": { "city": "Rotterdam", "country": "NL" },
+  "onTime": false
+}
